@@ -21,7 +21,7 @@ class Linear():
         self.grad_bias = torch.zeros(out_features)
         self.input = torch.zeros(batch_size, in_features)
 
-    def forward(self, input):
+    def forward(self, input): 
         self.input = input
         output = torch.mm(input, self.weight) + self.bias
         return output
@@ -68,6 +68,7 @@ class MLP():
         self.linear1 = Linear(512, 128, batch_size, lr)
         self.sigmoid1 = Sigmoid(128, batch_size)
         self.linear2 = Linear(128, 10, batch_size, lr)
+        self.parameters = nn.ParameterList([self.linear0.weight, self.linear0.bias, self.linear1.weight, self.linear1.bias,self.linear2.weight, self.linear2.bias])
 
     def forward(self, x):
         x = torch.flatten(x, 1)
@@ -86,38 +87,46 @@ class MLP():
         x = self.sigmoid0.backward(x)
         x = self.linear0.backward(x)
 
+
     def update(self):
         self.linear0.update()
         self.linear1.update()
         self.linear2.update()
 
+    
+
 def train(args, model, train_loader, epoch):
     train_loss=0
     for batch_idx, (data, target) in enumerate(train_loader):
-        output = model.forward(data)
-        loss = compute_loss(target, output)
-        gradient = compute_gradient(target, output)
-        model.backward(gradient)
-        model.update()
-        if batch_idx % args.log_interval == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item() / data.shape[0]))
+        if data.shape[0]==args.batch_size:
+            output = model.forward(data)
+            loss = compute_loss(target, output)
+            gradient = compute_gradient(target, output)
+            model.backward(gradient)
+            model.update()
+            train_loss += loss
+            if batch_idx % args.log_interval == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                    100. * batch_idx / len(train_loader), loss.item() / data.shape[0]))
     train_loss/= len(train_loader.dataset)
     return train_loss
+
+            
 
 
 def test(args, model, test_loader, epoch):
     test_loss = 0
     correct = 0
     for data, target in test_loader:
-        output = model.forward(data)
-        pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
-        correct += pred.eq(target.view_as(pred)).sum().item()
-       
-        target = F.one_hot(target)
-        loss = compute_loss(target, output)
-        test_loss += loss
+        if data.shape[0]==args.batch_size:
+            output = model.forward(data)
+            pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            correct += pred.eq(target.view_as(pred)).sum().item()
+            target = F.one_hot(target)
+            loss = compute_loss(target, output)
+            test_loss += loss
+            
 
     test_loss /= len(test_loader.dataset)
     accuracy=correct / len(test_loader.dataset)
@@ -141,12 +150,13 @@ def accuracy_plot(accuracy,epochs,lr=0.1):
     plt.legend()
     plt.show()
 
+
 def main():
     # Training settings
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
-    parser.add_argument('--epochs', type=int, default=30, metavar='N',
+    parser.add_argument('--epochs', type=int, default=14, metavar='N',
                         help='number of epochs to train (default: 14)')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate (default: 0.1)')
@@ -173,8 +183,8 @@ def main():
                        transform=transform)
     train_loader = torch.utils.data.DataLoader(dataset_train, shuffle=True, batch_size = args.batch_size)
     test_loader = torch.utils.data.DataLoader(dataset_test, shuffle=False, batch_size = args.batch_size)
-
     with torch.no_grad():
+        
         #Train the network with the given default parameters for 30 epochs. Then plot how the test and
         #train loss develop with the number of epochs. Additionally create a plot, which shows how the test
         #accuracy develops.
@@ -210,7 +220,13 @@ def main():
                 accuracy_list.append(accuracy)
                 scheduler.step()
             accuracy_plot(accuracy_list,args.epochs,lr)
+        
 
+
+
+            
 
 if __name__ == '__main__':
     main()
+
+
