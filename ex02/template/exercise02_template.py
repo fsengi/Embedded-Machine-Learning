@@ -9,6 +9,7 @@ from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 class Linear():
     def __init__(self, in_features: int, out_features: int, batch_size: int, lr=0.1):
@@ -136,19 +137,20 @@ def test(args, model, test_loader, epoch):
     return test_loss,accuracy
 
 def loss_visualisation(train_loss,test_loss,epochs):
+    plt.clf()
     plt.plot(range(epochs),train_loss,label='Train Loss',c='g')
     plt.plot(range(epochs),test_loss,label='Test Loss',c='r')
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.legend()
-    plt.show()
+    plt.savefig(f"ex02/template/loss_vis{datetime.now().strftime('%Y_%m_%d__%H_%M_%S')}.png")
 
 def accuracy_plot(accuracy,epochs,lr=0.1):
     plt.plot(range(epochs),accuracy,label="Learning Rate: {:.3f}".format(lr))
     plt.xlabel("Epochs")
     plt.ylabel("TestAccuracy")
     plt.legend()
-    plt.show()
+    plt.savefig(f"ex02/template/acc{datetime.now().strftime('%Y_%m_%d__%H_%M_%S')}.png")
 
 
 def main():
@@ -156,7 +158,7 @@ def main():
     parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
     parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
-    parser.add_argument('--epochs', type=int, default=14, metavar='N',
+    parser.add_argument('--epochs', type=int, default=30, metavar='N',
                         help='number of epochs to train (default: 14)')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate (default: 0.1)')
@@ -198,7 +200,8 @@ def main():
             accuracy_history.append(accuracy)
         print(train_loss_history,test_loss_history,accuracy)
         loss_visualisation(train_loss_history,test_loss_history,epoch)
-        accuracy_plot(accuracy_history,epoch)
+        accuracy_plot(accuracy_history,epoch, lr=args.lr)
+        plt.clf()
         
 
         #Run the training again for 30 epochs, but this time with varying learning rates. Choose at least
@@ -206,26 +209,22 @@ def main():
         #to compare the different learning rates.
 
         learning_rates = [1.0,0.5, 0.1, 0.01, 0.001] # choose different learning rates
-        accuracy_history=[]
-        for lr in learning_rates:
+        for index, lr in enumerate(learning_rates):
+            accuracy_history=[]
             args.lr = lr
+            accuracy_list = []
             model = MLP(args.batch_size, args.lr)
-            optimizer = optim.SGD(model.parameters, lr=lr)
+            optimizer = optim.SGD(model.parameters, lr=args.lr)
             scheduler = StepLR(optimizer, step_size=1, gamma=0.1)
             print("New LR:", scheduler.get_last_lr()[0])
-            accuracy_list = []
             for epoch in range(1, args.epochs + 1):
                 train_loss = train(args, model, train_loader, epoch)
                 optimizer.step()
                 test_loss, accuracy = test(args, model, test_loader, epoch)
                 accuracy_list.append(accuracy)
                 scheduler.step()
-            accuracy_plot(accuracy_list,args.epochs,lr)
-        
-
-
-
-            
+                accuracy_history.append(accuracy_list)
+            accuracy_plot(accuracy_list,args.epochs,lr=lr)
 
 if __name__ == '__main__':
     main()
