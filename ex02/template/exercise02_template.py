@@ -208,6 +208,7 @@ def main():
         learning_rates = [1.0,0.5, 0.1, 0.01, 0.001] # choose different learning rates
         accuracy_history=[]
         for lr in learning_rates:
+            args.lr = lr
             model = MLP(args.batch_size, args.lr)
             optimizer = optim.SGD(model.parameters, lr=lr)
             scheduler = StepLR(optimizer, step_size=1, gamma=0.1)
