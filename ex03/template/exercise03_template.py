@@ -29,6 +29,35 @@ class MLP(nn.Module):
       x = F.log_softmax(x, dim=1)
       return x
 
+class CNN(nn.Module):
+    def __init__(self):
+        super(CNN, self).__init__()
+        # Layer 1: Convolution
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1)
+        # Layer 2: Convolution
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2)
+        # Layer 3: Convolution
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1)
+        # Layer 5: Linear
+        self.fc1 = nn.Linear(128 * 11 * 11, 128)  # Calculating input features based on image size
+        # Layer 6: Linear
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        # Layer 1: Convolution -> ReLU
+        x = F.relu(self.conv1(x))
+        # Layer 2: Convolution -> ReLU
+        x = F.relu(self.conv2(x))
+        # Layer 3: Convolution -> ReLU
+        x = F.relu(self.conv3(x))
+        # Flatten layer
+        x = x.view(-1, 128 * 11 * 11)  # Reshape for fully connected layer
+        # Layer 5: Linear -> ReLU
+        x = F.relu(self.fc1(x))
+        # Layer 6: Linear -> LogSoftmax
+        x = F.log_softmax(self.fc2(x), dim=1)
+        return x
+
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
@@ -42,7 +71,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.item()))
-
+            
 def test(model, device, test_loader):
     model.eval()
     test_loss = 0
