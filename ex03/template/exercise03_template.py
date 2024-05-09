@@ -132,10 +132,15 @@ def main():
                        transform=transform)
     dataset_test = datasets.MNIST('../data', train=False,
                        transform=transform)
+    cifar10_train = datasets.CIFAR10('../data', train=True, download=True)
+    cifar10_test = datasets.CIFAR10('../data', train=True, download=True)
+    cifar10_train_loader = torch.utils.data.DataLoader(cifar10_train,**train_kwargs)
+    cifar10_test_loader = torch.utils.data.DataLoader(cifar10_test,**test_kwargs)
     train_loader = torch.utils.data.DataLoader(dataset_train,**train_kwargs)
     test_loader = torch.utils.data.DataLoader(dataset_test, **test_kwargs)
 
     model = MLP().to(device)
+    cifar_model = CNN.to(device)
 
     optimizer = optim.SGD(model.parameters(), lr=args.lr)
 
