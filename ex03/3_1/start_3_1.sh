@@ -7,8 +7,8 @@
 #SBATCH -o slurm_output.log
 
 # load appropriate conda paths, because we are not in a login shell
+
 eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
 conda activate eml
 
-echo "Running template.py"
-python template.py
+python template/exercise03_template.py
