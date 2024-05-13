@@ -4,18 +4,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import torchvision
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 import matplotlib.pyplot as plt
 import time
-import json
 
 
 class MLP(nn.Module):
-    def __init__(self,) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self.linear0 = nn.Linear(28*28, 512, bias=True)
+        self.linear0 = nn.Linear(32*32*3, 512, bias=True)
         self.sigmoid0 = nn.Sigmoid()
         self.linear1 = nn.Linear(512, 128, bias=True)
         self.sigmoid1 = nn.Sigmoid()
@@ -33,6 +31,36 @@ class MLP(nn.Module):
       x = F.log_softmax(x, dim=1)
       return x
 
+class CNN(nn.Module):
+    def __init__(self):
+        super(CNN, self).__init__()
+        # Layer 1: Convolution
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1)
+        # Layer 2: Convolution
+        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=2)
+        # Layer 3: Convolution
+        self.conv3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1)
+        # Layer 5: Linear
+        self.fc1 = nn.Linear(18432, 128)  # Calculating input features based on image size
+        # Layer 6: Linear
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        # Layer 1: Convolution -> ReLU
+        x = F.relu(self.conv1(x))
+        # Layer 2: Convolution -> ReLU
+        x = F.relu(self.conv2(x))
+        # Layer 3: Convolution -> ReLU
+        x = F.relu(self.conv3(x))
+        # Flatten layer
+        x = torch.flatten(x, 1)
+        # x = x.view(-1, 128 * 11 * 11)  # Reshape for fully connected layer
+        # Layer 5: Linear -> ReLU
+        x = F.relu(self.fc1(x))
+        # Layer 6: Linear -> LogSoftmax
+        x = F.log_softmax(self.fc2(x), dim=1)
+        return x
+
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
@@ -46,7 +74,7 @@ def train(args, model, device, train_loader, optimizer, epoch):
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.item()))
-
+            
 def test(model, device, test_loader):
     model.eval()
     test_loss = 0
@@ -60,11 +88,13 @@ def test(model, device, test_loader):
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(test_loader.dataset)
+
     acc = 100. * correct / len(test_loader.dataset)
 
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset), acc))
     return acc
+
 
 def main():
     # Training settings
@@ -74,27 +104,25 @@ def main():
     parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
                         help='input batch size for testing (default: 1000)')
     parser.add_argument('--epochs', type=int, default=30, metavar='N',
-                        help='number of epochs to train (default: 30)')
+                        help='number of epochs to train (default: 14)')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
-                        help='learning rate (default: 0.1)')
-    parser.add_argument('--no-cuda', action='store_true', default=True,
+                        help='learning rate (default: 1.0)')
+    parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
-    args = parser.parse_args()    
+    args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
 
     torch.manual_seed(args.seed)
 
-    # device = torch.device("cuda" if use_cuda else "cpu")
-    device = torch.device("cpu")
+    device = torch.device("cuda" if use_cuda else "cpu")
 
     train_kwargs = {'batch_size': args.batch_size}
     test_kwargs = {'batch_size': args.test_batch_size}
     if use_cuda:
-        print("WILL USE CUDA!!")
         cuda_kwargs = {'num_workers': 1,
                        'pin_memory': True,
                        'shuffle': True}
@@ -102,49 +130,57 @@ def main():
         test_kwargs.update(cuda_kwargs)
 
     transform=transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
+        transforms.ToTensor()
         ])
-    dataset_train = datasets.MNIST('../data', train=True, download=True,
-                       transform=transform)
-    dataset_test = datasets.MNIST('../data', train=False,
-                       transform=transform)
-    train_loader = torch.utils.data.DataLoader(dataset_train,**train_kwargs)
-    test_loader = torch.utils.data.DataLoader(dataset_test, **test_kwargs)
+    
+    cifar10_dataset_train = datasets.CIFAR10('../../data', train=True, download=True, transform=transform)
+    cifar10_dataset_test = datasets.CIFAR10('../../data', train=False, transform=transform)
 
-    model = MLP().to(device)
+    cifar10_train_loader = torch.utils.data.DataLoader(cifar10_dataset_train,**train_kwargs)
+    cifar10_test_loader = torch.utils.data.DataLoader(cifar10_dataset_test,**test_kwargs)
 
-    optimizer = optim.SGD(model.parameters(), lr=args.lr)
+    modelList = []
+    modelList.append( MLP().to(device) )
+    modelList.append( CNN().to(device) )
 
-    timeDevice = []
-    accDevice = []
+    accMLP = []
+    accCNN = []
+    masterListAcc= [accMLP, accCNN]
 
-    start = time.time()
-    for epoch in range(1, args.epochs + 1):
-        train(args, model, device, train_loader, optimizer, epoch)
-        accDevice.append(test(model, device, test_loader))
-        timeDevice.append(time.time() - start)
+    tMLP = []
+    tCNN = []
+    masterListT= [tMLP, tCNN]
 
-    data = {
-        'time': timeDevice,
-        'acc': accDevice
-    }
+    for model, accList, tList in zip(modelList, masterListAcc, masterListT):
+        optimizer = optim.SGD(model.parameters(), lr=args.lr)
+        start = time.time()
+        for epoch in range(1, args.epochs + 1):
+            train(args, model, device, cifar10_train_loader, optimizer, epoch)
+            accList.append(test(model, device, cifar10_test_loader))
+            tList.append(time.time() - start)
+    
+    plotdataAcc(mlp=accMLP, cnn=accCNN)
+    plotdataTime(mlptime=tMLP, mlpacc=accMLP, cnnacc=accCNN, cnntime=tCNN)
 
-    if use_cuda:
-        with open("GPUdata.json", 'w') as json_file:
-            json.dump(data, json_file)
-    else:
-        with open("CPUdata.json", 'w') as json_file:
-            json.dump(data, json_file)
+def plotdataAcc(mlp:list, cnn:list) -> None:
+    plt.clf()
+    plt.plot(mlp, label='MLP')
+    plt.plot(cnn, label='CNN')
+    plt.title("accuracy over epochs for MLP and CNN")
+    plt.ylabel("accuracy in %")
+    plt.xlabel("epochs")
+    plt.legend()
+    plt.savefig("acc_plot_3_2.png")
 
-def plotdata(gput:list, cput:list, gpuacc:list, cpuacc:list) -> None:
-    plt.plot(gput, gpuacc, label='GPU')
-    plt.plot(cput, cpuacc, label='CPU')
-    plt.title("accuracy over executiontime for GPU and CPU")
+def plotdataTime(mlpacc:list, cnnacc:list, mlptime:list, cnntime:list) -> None:
+    plt.clf()
+    plt.plot(mlptime, mlpacc, label='MLP')
+    plt.plot(cnntime, cnnacc, label='CNN')
+    plt.title("accuracy over executiontime for MLP and CNN on GPU")
     plt.ylabel("accuracy in %")
     plt.xlabel("time in s")
     plt.legend()
-    plt.savefig("timeplot_3_1.png")
+    plt.savefig("timeplot_3_2.png")
 
 if __name__ == '__main__':
     main()
