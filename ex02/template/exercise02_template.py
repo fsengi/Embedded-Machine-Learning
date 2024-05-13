@@ -1,4 +1,5 @@
 from __future__ import print_function
+import os
 import argparse
 import torch
 import torch.nn as nn
@@ -10,6 +11,8 @@ from torch.optim.lr_scheduler import StepLR
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 class Linear():
     def __init__(self, in_features: int, out_features: int, batch_size: int, lr=0.1):
@@ -99,6 +102,7 @@ class MLP():
 def train(args, model, train_loader, epoch):
     train_loss=0
     for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(DEVICE), target.to(DEVICE)
         if data.shape[0]==args.batch_size:
             output = model.forward(data)
             loss = compute_loss(target, output)
@@ -120,8 +124,9 @@ def test(args, model, test_loader, epoch):
     test_loss = 0
     correct = 0
     for data, target in test_loader:
+        data = data.to(DEVICE)
         if data.shape[0]==args.batch_size:
-            output = model.forward(data)
+            output = model.forward(data).cpu().detach()
             pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
             correct += pred.eq(target.view_as(pred)).sum().item()
             target = F.one_hot(target)
@@ -191,7 +196,7 @@ def main():
         #train loss develop with the number of epochs. Additionally create a plot, which shows how the test
         #accuracy develops.
         train_loss_history,test_loss_history,accuracy_history=[],[],[]
-        model = MLP(args.batch_size, args.lr)
+        model = MLP(args.batch_size, args.lr).to(DEVICE)
         for epoch in range(1, args.epochs + 1):
             train_loss=train(args, model, train_loader, epoch)
             train_loss_history.append(train_loss)
@@ -213,7 +218,7 @@ def main():
             accuracy_history=[]
             args.lr = lr
             accuracy_list = []
-            model = MLP(args.batch_size, args.lr)
+            model = MLP(args.batch_size, args.lr).to(DEVICE)
             optimizer = optim.SGD(model.parameters, lr=args.lr)
             scheduler = StepLR(optimizer, step_size=1, gamma=0.1)
             print("New LR:", scheduler.get_last_lr()[0])
