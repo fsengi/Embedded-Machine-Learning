@@ -11,4 +11,4 @@
 eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
 conda activate eml
 
-python template/exercise03_template.py
+python 3_1.py
