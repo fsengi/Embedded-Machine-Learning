@@ -137,14 +137,5 @@ def main():
         with open("CPUdata.json", 'w') as json_file:
             json.dump(data, json_file)
 
-def plotdata(gput:list, cput:list, gpuacc:list, cpuacc:list) -> None:
-    plt.plot(gput, gpuacc, label='GPU')
-    plt.plot(cput, cpuacc, label='CPU')
-    plt.title("accuracy over executiontime for GPU and CPU")
-    plt.ylabel("accuracy in %")
-    plt.xlabel("time in s")
-    plt.legend()
-    plt.savefig("timeplot_3_1.png")
-
 if __name__ == '__main__':
     main()
