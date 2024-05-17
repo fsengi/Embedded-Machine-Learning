@@ -92,26 +92,35 @@ def plotdropout(data:dict) -> None:
     fig, ax1 = plt.subplots()
 
     # Plot the first set of data
-    ax1.plot(data['accTest'], 'bo-', label='accuracy')
-    ax1.set_xlabel("time in s")
+    ax1.plot(data["0.0"]['accTest'], 'bo-', label='accuracy dropout 0.0')
+    # ax1.plot(data["0.1"]['accTest'], 'bo-', label='accuracy dropout 0.1')
+    # ax1.plot(data["0.3"]['accTest'], 'bo-', label='accuracy dropout 0.3')
+    # ax1.plot(data["0.5"]['accTest'], 'bo-', label='accuracy dropout 0.5')
+    # ax1.plot(data["0.7"]['accTest'], 'bo-', label='accuracy dropout 0.7')
+    ax1.plot(data["0.9"]['accTest'], 'ro-', label='accuracy dropout 0.9')
+
+    ax1.set_xlabel("epochos")
     ax1.set_ylabel("accuracy in %", color='b')
     ax1.tick_params('y', colors='b')
 
     # Create a secondary y-axis sharing the same x-axis
     ax2 = ax1.twinx()
-    ax2.plot(data['trainLoss'], 'x-', label='trainLoss')
-    ax2.plot(data['testLoss'], 'x-', label='testLoss')
-    ax2.set_ylabel('Loss')
+    ax2.plot(np.array(data["0.1"]['accTest']) - np.array(data["0.0"]['accTest']), 'x-', label='diff 0.1')
+    # ax2.plot(np.array(data["0.3"]['accTest']) - np.array(data["0.0"]['accTest']), 'x-', label='diff 0.3')
+    ax2.plot(np.array(data["0.5"]['accTest']) - np.array(data["0.0"]['accTest']), 'x-', label='diff 0.5')
+    # ax2.plot(np.array(data["0.7"]['accTest']) - np.array(data["0.0"]['accTest']), 'x-', label='diff 0.7')
+    ax2.plot(np.array(data["0.9"]['accTest']) - np.array(data["0.0"]['accTest']), 'x-', label='diff 0.9')
+    ax2.set_ylabel('diff Loss')
     ax2.tick_params('y')
-
+    ax2.set_ylim(-4, 5)
     # Add legends
     ax1.legend(loc='upper left')
     ax2.legend(loc='upper right')
 
     # Show the plot
-    plt.title("VGG11 accuracy, test loss and train loss over 30 epochs")
+    plt.title("VGG11 accuracy and accuracy difference for dropout rates ")
     plt.legend()
-    plt.savefig("4_1_loss_ocer_time.png")
+    plt.savefig("4_1_diff_dropout.png")
 
 
 if __name__ == "__main__":
