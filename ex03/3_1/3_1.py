@@ -77,19 +77,20 @@ def main():
                         help='number of epochs to train (default: 30)')
     parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
                         help='learning rate (default: 0.1)')
-    parser.add_argument('--no-cuda', action='store_true', default=True,
+    parser.add_argument('--no-cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--seed', type=int, default=1, metavar='S',
                         help='random seed (default: 1)')
     parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                         help='how many batches to wait before logging training status')
     args = parser.parse_args()    
+
+    print(f'cuda is avail: {torch.cuda.is_available()} args.no_cuda: {args.no_cuda}')
     use_cuda = not args.no_cuda and torch.cuda.is_available()
 
     torch.manual_seed(args.seed)
 
-    # device = torch.device("cuda" if use_cuda else "cpu")
-    device = torch.device("cpu")
+    device = torch.device("cuda" if use_cuda else "cpu")
 
     train_kwargs = {'batch_size': args.batch_size}
     test_kwargs = {'batch_size': args.test_batch_size}
@@ -100,6 +101,8 @@ def main():
                        'shuffle': True}
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
+    else:
+        print("NO CUDA")
 
     transform=transforms.Compose([
         transforms.ToTensor(),

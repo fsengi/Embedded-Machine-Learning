@@ -12,10 +12,11 @@ eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
 conda activate eml
 
 echo "no cuda"
-python 3_1.py --no-cuda $true
+python 3_1.py --no-cuda
 
 echo "with cuda"
-python 3_1.py --no-cuda $false
+python 3_1.py
 
 echo "plot"
 python plot.py
+echo "done"

@@ -16,7 +16,7 @@ class VGG11(nn.Module):
 
     def _make_layers(self, dropout_p):
         layers = [
-            nn.Conv2d(224*224*3, 64, kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(),
 
             nn.MaxPool2d(kernel_size=2, stride=2),
@@ -24,9 +24,9 @@ class VGG11(nn.Module):
             nn.ReLU(),
 
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(2, 256, kernel_size=3, padding=1),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(2, 256, kernel_size=3, padding=1),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
             
@@ -42,15 +42,19 @@ class VGG11(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=2, stride=2),
 
+            nn.Flatten(end_dim=-1),
+
             nn.Linear(in_features=512, out_features=4096),
+            nn.Dropout(dropout_p),
             nn.ReLU(),
-            nn.Linear(in_features=4096, out_features=4096),
+            nn.Linear(in_features=4096, out_features=1000),
+            nn.Dropout(dropout_p),
             nn.ReLU(),
-            nn.Linear(in_features=4096, out_features=4096)          
+            nn.Linear(in_features=1000, out_features=10)          
         ]
         return nn.ModuleList(layers)
 
-    def forward(self, x):
+    def forward(self, x):       
         for mod in self.layers:
             x = mod(x)
         output = F.log_softmax(x, dim=1)
@@ -66,10 +70,12 @@ def train(args, model, device, train_loader, optimizer, epoch):
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
+            trainloss = 100. * batch_idx / len(train_loader)
             print('Current time: {:.4f}; Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 time.time(),
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
+                trainloss,  loss.item()))
+    return loss.item()
 
 def test(model, device, test_loader, epoch):
     model.eval()
@@ -84,12 +90,10 @@ def test(model, device, test_loader, epoch):
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(test_loader.dataset)
+    acc = 100. * correct / len(test_loader.dataset)
 
-    print('Current time: {:.4f}; Test Epoch: {}, Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.4f}%)\n'.format(
-        time.time(),
-        epoch,
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+    print(f'Current time: {time.time()}; Test Epoch: {epoch}, Test set: Average loss: {test_loss}, Accuracy: {correct}/{len(test_loader.dataset)} ({acc}%)\n')
+    return test_loss, acc
 
 def main():
     # Training settings
@@ -104,6 +108,8 @@ def main():
                         help='learning rate (default: 0.0001)')
     parser.add_argument('--dropout_p', type=float, default=0.0,
                         help='dropout_p (default: 0.0)')
+    parser.add_argument('--dropout_test',action='store_true', default=False,
+                        help='enable dropout probability test')
     parser.add_argument('--L2_reg', type=float, default=None,
                         help='L2_reg (default: None)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -128,30 +134,65 @@ def main():
         train_kwargs.update(cuda_kwargs)
         test_kwargs.update(cuda_kwargs)
 
+        with open("GPUdata.json", 'r') as json_file:
+            data = json.load(json_file)
+
     test_transforms = transforms.Compose([transforms.ToTensor()])
     train_transforms = [transforms.ToTensor()]
     train_transforms = transforms.Compose(train_transforms)
 
-    dataset_train = datasets.SVHN('../data', split='train', download=True,
+    dataset_train = datasets.SVHN('../../data', split='train', download=True,
                        transform=train_transforms)
-    dataset_test = datasets.SVHN('../data', split='test', download=True,
+    dataset_test = datasets.SVHN('../../data', split='test', download=True,
                        transform=test_transforms)
-    train_loader = torch.utils.data.DataLoader(dataset_train,**train_kwargs)
-    test_loader = torch.utils.data.DataLoader(dataset_test, **test_kwargs)
+    
+    transform=transforms.Compose([
+        transforms.ToTensor()
+        ])
+    
+    cifar10_dataset_train = datasets.CIFAR10('../../data', train=True, download=True, transform=transform)
+    cifar10_dataset_test = datasets.CIFAR10('../../data', train=False, transform=transform)
+
+    train_loader = torch.utils.data.DataLoader(cifar10_dataset_train,**train_kwargs)
+    test_loader = torch.utils.data.DataLoader(cifar10_dataset_test, **test_kwargs)
 
     model = VGG11(dropout_p=args.dropout_p).to(device)
     
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
+  
+    timeDevice = []
+    trainLoss = []
+    testLoss = []
+    accTest = []
 
-    print(f'Starting training at: {time.time():.4f}')
+    start = time.time()
     for epoch in range(1, args.epochs + 1):
-        train(args, model, device, train_loader, optimizer, epoch)
-        test(model, device, test_loader, epoch)
+        trainLoss.append(train(args, model, device, train_loader, optimizer, epoch))
+        testloss, acc = test(model, device, test_loader, epoch)
+        timeDevice.append(time.time() - start)
+        accTest.append(acc)
+        testLoss.append(testloss)
 
     if (args.L2_reg is not None):
         f_name = f'trained_VGG11_L2-{args.L2_reg}.pt'
         torch.save(model.state_dict(), f_name)
         print(f'Saved model to: {f_name}')
+
+    dataDict = {
+        'time': timeDevice,
+        'trainLoss': trainLoss,
+        'testLoss': testLoss,
+        'accTest': accTest
+    }
+    
+    data[str(args.dropout_p)] = dataDict
+
+    if use_cuda:
+        with open("GPUdata.json", 'w') as json_file:
+            json.dump(data, json_file)
+    else:
+        with open("CPUdata.json", 'w') as json_file:
+            json.dump(data, json_file)
 
 
 if __name__ == '__main__':

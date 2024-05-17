@@ -10,8 +10,38 @@
 eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
 conda activate eml
 
-echo "Running 4_1.py no cuda epoch 1"
-python 4_1.py --no_cuda $true --epochs $1
 
-echo "Running 4_1.py cuda epoch 1"
-python 4_1.py --no_cuda $true --epochs $1
+################ create bar plot ################### 
+# echo "Running 4_1.py no cuda epoch 1"
+# python 4_1.py --no-cuda --epochs 1
+
+# echo "Running 4_1.py cuda epoch 1"
+# python 4_1.py --epochs 1
+
+# echo "plot"
+# python plot.py --plot-bar
+
+
+############### create drop out plot ##############
+
+# echo "Running 4_1.py"
+# python 4_1.py --epochs 30
+
+# echo "Running 4_1.py --dropout_p 0.1"
+# python 4_1.py --epochs 30 --dropout_p 0.1
+
+# echo "Running 4_1.py --dropout_p 0.1"
+# python 4_1.py --epochs 30 --dropout_p 0.3
+
+# echo "Running 4_1.py --dropout_p 0.1"
+# python 4_1.py --epochs 30 --dropout_p 0.5
+
+# echo "Running 4_1.py --dropout_p 0.1"
+# python 4_1.py --epochs 30 --dropout_p 0.7
+
+# echo "Running 4_1.py --dropout_p 0.1"
+# python 4_1.py --epochs 30 --dropout_p 0.9
+
+# echo "plot dropout"
+python plot.py --plot-dropout
+
