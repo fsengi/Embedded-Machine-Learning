@@ -108,8 +108,6 @@ def main():
                         help='learning rate (default: 0.0001)')
     parser.add_argument('--dropout_p', type=float, default=0.0,
                         help='dropout_p (default: 0.0)')
-    parser.add_argument('--dropout_test',action='store_true', default=False,
-                        help='enable dropout probability test')
     parser.add_argument('--L2_reg', type=float, default=None,
                         help='L2_reg (default: None)')
     parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -137,15 +135,9 @@ def main():
         with open("GPUdata.json", 'r') as json_file:
             data = json.load(json_file)
 
-    test_transforms = transforms.Compose([transforms.ToTensor()])
     train_transforms = [transforms.ToTensor()]
     train_transforms = transforms.Compose(train_transforms)
 
-    dataset_train = datasets.SVHN('../../data', split='train', download=True,
-                       transform=train_transforms)
-    dataset_test = datasets.SVHN('../../data', split='test', download=True,
-                       transform=test_transforms)
-    
     transform=transforms.Compose([
         transforms.ToTensor()
         ])
@@ -158,7 +150,7 @@ def main():
 
     model = VGG11(dropout_p=args.dropout_p).to(device)
     
-    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.L2_reg)
   
     timeDevice = []
     trainLoss = []
@@ -184,8 +176,12 @@ def main():
         'testLoss': testLoss,
         'accTest': accTest
     }
+
+    if (args.L2_reg is not None):
     
-    data[str(args.dropout_p)] = dataDict
+        data[f'wdecay_{args.L2_reg}'] = dataDict
+    else:
+        data[f'dropout_{args.dropout_p}'] = dataDict
 
     if use_cuda:
         with open("GPUdata.json", 'w') as json_file:

@@ -1,7 +1,9 @@
+from ex4_1 import VGG11
 import json
 import matplotlib.pyplot as plt
 import argparse
 import numpy as np
+import torch
 
 
 def plotdata(data:dict) -> None:
@@ -86,18 +88,17 @@ def plotbar(dataCPU:dict, dataGPU:dict, ) -> None:
     plt.show()
     plt.savefig("4_1_time_comp.png")
 
-
 def plotdropout(data:dict) -> None:
     # Create the main plot
     fig, ax1 = plt.subplots()
 
     # Plot the first set of data
-    ax1.plot(data["0.0"]['accTest'], 'bo-', label='accuracy dropout 0.0')
-    # ax1.plot(data["0.1"]['accTest'], 'bo-', label='accuracy dropout 0.1')
-    # ax1.plot(data["0.3"]['accTest'], 'bo-', label='accuracy dropout 0.3')
-    # ax1.plot(data["0.5"]['accTest'], 'bo-', label='accuracy dropout 0.5')
-    # ax1.plot(data["0.7"]['accTest'], 'bo-', label='accuracy dropout 0.7')
-    ax1.plot(data["0.9"]['accTest'], 'ro-', label='accuracy dropout 0.9')
+    ax1.plot(data["dropout_dropout_0.0"]['accTest'], 'bo-', label='accuracy dropout 0.0')
+    # ax1.plot(data["dropout_0.1"]['accTest'], 'bo-', label='accuracy dropout 0.1')
+    # ax1.plot(data["dropout_0.3"]['accTest'], 'bo-', label='accuracy dropout 0.3')
+    # ax1.plot(data["dropout_0.5"]['accTest'], 'bo-', label='accuracy dropout 0.5')
+    # ax1.plot(data["dropout_0.7"]['accTest'], 'bo-', label='accuracy dropout 0.7')
+    ax1.plot(data["dropout_0.9"]['accTest'], 'ro-', label='accuracy dropout 0.9')
 
     ax1.set_xlabel("epochos")
     ax1.set_ylabel("accuracy in %", color='b')
@@ -105,11 +106,11 @@ def plotdropout(data:dict) -> None:
 
     # Create a secondary y-axis sharing the same x-axis
     ax2 = ax1.twinx()
-    ax2.plot(np.array(data["0.1"]['accTest']) - np.array(data["0.0"]['accTest']), 'x-', label='diff 0.1')
-    # ax2.plot(np.array(data["0.3"]['accTest']) - np.array(data["0.0"]['accTest']), 'x-', label='diff 0.3')
-    ax2.plot(np.array(data["0.5"]['accTest']) - np.array(data["0.0"]['accTest']), 'x-', label='diff 0.5')
-    # ax2.plot(np.array(data["0.7"]['accTest']) - np.array(data["0.0"]['accTest']), 'x-', label='diff 0.7')
-    ax2.plot(np.array(data["0.9"]['accTest']) - np.array(data["0.0"]['accTest']), 'x-', label='diff 0.9')
+    ax2.plot(np.array(data["dropout_0.1"]['accTest']) - np.array(data["dropout_0.0"]['accTest']), 'x-', label='diff 0.1')
+    # ax2.plot(np.array(data["dropout_0.3"]['accTest']) - np.array(data["dropout_0.0"]['accTest']), 'x-', label='diff 0.3')
+    ax2.plot(np.array(data["dropout_0.5"]['accTest']) - np.array(data["dropout_0.0"]['accTest']), 'x-', label='diff 0.5')
+    # ax2.plot(np.array(data["dropout_0.7"]['accTest']) - np.array(data["dropout_0.0"]['accTest']), 'x-', label='diff 0.7')
+    ax2.plot(np.array(data["dropout_0.9"]['accTest']) - np.array(data["dropout_0.0"]['accTest']), 'x-', label='diff 0.9')
     ax2.set_ylabel('diff Loss')
     ax2.tick_params('y')
     ax2.set_ylim(-4, 5)
@@ -123,6 +124,38 @@ def plotdropout(data:dict) -> None:
     plt.savefig("4_1_diff_dropout.png")
 
 
+def plotWeightDecayAcc(data:dict) -> None:
+    # Plot the first set of data
+    plt.plot(data["wdecay_0.0"]['accTest'], 'x-', label='L2 reg 0.0')
+    plt.plot(data["wdecay_0.001"]['accTest'], 'x-', label='L2 reg 0.001')
+    plt.plot(data["wdecay_0.0001"]['accTest'], 'x-', label='L2 reg 0.0001')
+    plt.plot(data["wdecay_1e-05"]['accTest'], 'x-', label='L2 reg 0.00001')
+    plt.plot(data["wdecay_1e-06"]['accTest'], 'x-', label='L2 reg 0.000001')
+    plt.xlabel("epochs")
+    plt.ylabel("accuracy in %")
+    # Add legends
+    plt.legend()
+    # Show the plot
+    plt.title("VGG11 accuracy for different L2 regularization rates ")
+    plt.savefig("4_2_L2_regularization_acc.png")
+    plt.ylim(65, 75)
+    plt.savefig("4_2_L2_regularization_acc_zoonm.png")
+
+
+def plotWeightDecayHist(weight_list:list, titels:list) -> None:
+    fig, axs = plt.subplots(1, 5, figsize=(25, 5))
+    for i, (weights, title) in enumerate(zip(weight_list, titles)):
+        axs[i].hist(weights.flatten(), bins=30, color='blue', alpha=0.7)
+        axs[i].set_title(title)
+        axs[i].set_xlabel('epochs')
+        axs[i].set_ylabel('weight value')
+    plt.tight_layout()
+    # Show the plot
+    plt.title("VGG11 last layer histograms for different L2 regularization rates over epochs")
+    plt.legend()
+    plt.savefig("4_2_L2_reg_hist.png")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch SVHN Example')
     
@@ -132,6 +165,8 @@ if __name__ == "__main__":
                         help='plot loss no dropout')
     parser.add_argument('--plot-dropout', action='store_true', default=False,
                         help='plot loss with dropout')
+    parser.add_argument('--plot-weight-decay', action='store_true', default=False,
+                        help='plot hist for weight decay')        
   
     args = parser.parse_args()
     use_cuda = not args.plot_bar
@@ -154,4 +189,28 @@ if __name__ == "__main__":
         plotdata(data=dataGPU)
     elif args.plot_dropout:
         plotdropout(data=dataGPU)
+    elif args.plot_weight_decay:
+        plotWeightDecayAcc(data=dataGPU)
+        # plotWeightDecayHist(data=dataGPU)
+
+        # File paths to your .pt files
+        model_files = [
+            'trained_VGG11_L2-0.0.pt',
+            'trained_VGG11_L2-0.001.pt',
+            'trained_VGG11_L2-0.0001.pt',
+            'trained_VGG11_L2-1e-05.pt',
+            'trained_VGG11_L2-1e-06.pt',
+        ]
+
+        # Titles for the subplots
+        titles = ['L2 reg 0.0', 'L2 reg 0.001', 'L2 reg 1e-04', 'L2 reg 1e-05', 'L2 reg 1e-06']
+
+        # Load models and extract last layer weights
+        model = VGG11()
+        weight_list = []
+        for filepath in model_files:
+            model.state_dict(torch.load(filepath), 'weights')
+            
+            for param_tensor in model.state_dict():
+                print(param_tensor, "\t", model.state_dict()[param_tensor].size())
 

@@ -1,4 +1,5 @@
 .venv/
-
+*.pt
 data
 */data
+*.log
