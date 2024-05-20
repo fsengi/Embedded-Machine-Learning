@@ -149,8 +149,13 @@ def main():
     test_loader = torch.utils.data.DataLoader(cifar10_dataset_test, **test_kwargs)
 
     model = VGG11(dropout_p=args.dropout_p).to(device)
+
+    if args.L2_reg is None:
+        weight_decay = 0.0
+    else:
+        weight_decay = args.L2_reg
     
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.L2_reg)
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=(weight_decay))
   
     timeDevice = []
     trainLoss = []
