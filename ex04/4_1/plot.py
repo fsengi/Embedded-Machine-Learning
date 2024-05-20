@@ -1,10 +1,60 @@
-from ex4_1 import VGG11
 import json
 import matplotlib.pyplot as plt
 import argparse
 import numpy as np
 import torch
+import torch.nn as nn
 
+class VGG11(nn.Module):
+    def __init__(self, dropout_p=0.5):
+        super().__init__()
+        self.layers = self._make_layers(dropout_p)
+
+    def _make_layers(self, dropout_p):
+        layers = [
+            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, padding=1),
+            nn.ReLU(),
+
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU(),
+
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            
+            nn.Conv2d(256, 512, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            nn.Flatten(end_dim=-1),
+
+            nn.Linear(in_features=512, out_features=4096),
+            nn.Dropout(dropout_p),
+            nn.ReLU(),
+            nn.Linear(in_features=4096, out_features=1000),
+            nn.Dropout(dropout_p),
+            nn.ReLU(),
+            nn.Linear(in_features=1000, out_features=10)          
+        ]
+        return nn.ModuleList(layers)
+
+    def forward(self, x):       
+        for mod in self.layers:
+            x = mod(x)
+        output = F.log_softmax(x, dim=1)
+        return output
 
 def plotdata(data:dict) -> None:
     # Create the main plot
@@ -72,10 +122,10 @@ def plotbar(dataCPU:dict, dataGPU:dict, ) -> None:
     fig, ax = plt.subplots()
 
     # Plot the left side bar
-    barcpu = ax.bar(x_positions[0], left_value, width=0.4, label=f'{left_label} {round(left_value,2)}s')
+    ax.bar(x_positions[0], left_value, width=0.4, label=f'{left_label} {round(left_value,2)}s')
 
     # Plot the right side bar
-    bargpu = ax.bar(x_positions[1], right_value, width=0.4, label=f'{right_label} {round(right_value,2)}s')
+    ax.bar(x_positions[1], right_value, width=0.4, label=f'{right_label} {round(right_value,2)}s')
 
     # Customize the plot
     ax.set_xticks(x_positions)
@@ -127,33 +177,45 @@ def plotdropout(data:dict) -> None:
 def plotWeightDecayAcc(data:dict) -> None:
     # Plot the first set of data
     plt.plot(data["wdecay_0.0"]['accTest'], 'x-', label='L2 reg 0.0')
-    plt.plot(data["wdecay_0.001"]['accTest'], 'x-', label='L2 reg 0.001')
-    plt.plot(data["wdecay_0.0001"]['accTest'], 'x-', label='L2 reg 0.0001')
-    plt.plot(data["wdecay_1e-05"]['accTest'], 'x-', label='L2 reg 0.00001')
-    plt.plot(data["wdecay_1e-06"]['accTest'], 'x-', label='L2 reg 0.000001')
+    plt.plot(data["wdecay_0.001"]['accTest'], 'x-', label='L2 reg 1e-3')
+    plt.plot(data["wdecay_0.0001"]['accTest'], 'x-', label='L2 reg 1e-4')
+    plt.plot(data["wdecay_1e-05"]['accTest'], 'x-', label='L2 reg 1e-5')
+    plt.plot(data["wdecay_1e-06"]['accTest'], 'x-', label='L2 reg 1e-6')
     plt.xlabel("epochs")
     plt.ylabel("accuracy in %")
     # Add legends
     plt.legend()
     # Show the plot
-    plt.title("VGG11 accuracy for different L2 regularization rates ")
+    plt.title("VGG11 accuracy for different L2 regularization rates")
     plt.savefig("4_2_L2_regularization_acc.png")
     plt.ylim(65, 75)
-    plt.savefig("4_2_L2_regularization_acc_zoonm.png")
+    plt.savefig("4_2_L2_regularization_acc_zoom.png")
 
 
 def plotWeightDecayHist(weight_list:list, titels:list) -> None:
     fig, axs = plt.subplots(1, 5, figsize=(25, 5))
-    for i, (weights, title) in enumerate(zip(weight_list, titles)):
-        axs[i].hist(weights.flatten(), bins=30, color='blue', alpha=0.7)
+    for i, (weights, title) in enumerate(zip(weight_list, titels)):
+        axs[i].hist(weights, bins=100, alpha=0.7)
         axs[i].set_title(title)
         axs[i].set_xlabel('epochs')
-        axs[i].set_ylabel('weight value')
+        axs[i].set_ylabel('count weight value')
     plt.tight_layout()
     # Show the plot
     plt.title("VGG11 last layer histograms for different L2 regularization rates over epochs")
     plt.legend()
     plt.savefig("4_2_L2_reg_hist.png")
+
+def plotSingleWeightDecayHist(weight_list:list, titel:str) -> None:
+    plt.clf()
+    plt.hist(weight_list, bins=100, alpha=0.7)
+    plt.title(titel)
+    plt.xlabel('epochs')
+    plt.ylabel('count weight value')
+    plt.tight_layout()
+    # Show the plot
+    plt.title("VGG11 last layer histograms for different L2 regularization rates over epochs")
+    plt.legend()
+    plt.savefig(f"4_2_L2_reg_hist{titel}.png")
 
 
 if __name__ == "__main__":
@@ -206,11 +268,16 @@ if __name__ == "__main__":
         titles = ['L2 reg 0.0', 'L2 reg 0.001', 'L2 reg 1e-04', 'L2 reg 1e-05', 'L2 reg 1e-06']
 
         # Load models and extract last layer weights
+    
         model = VGG11()
-        weight_list = []
-        for filepath in model_files:
-            model.state_dict(torch.load(filepath), 'weights')
-            
-            for param_tensor in model.state_dict():
-                print(param_tensor, "\t", model.state_dict()[param_tensor].size())
+
+        for filepath, title in zip(model_files, titles):
+            model.state_dict(torch.load(filepath))
+            weight_list = []
+            for name, param in model.named_parameters():
+                print(name)
+                if 'layers.18.weight' in name:
+                    weight_list = param.detach().view(-1).numpy()  
+                    # plotSingleWeightDecayHist(weight_list=weight_list, titel=title)
+        plotWeightDecayHist(weight_list=weight_list, titels=titles)
 

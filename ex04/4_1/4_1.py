@@ -47,10 +47,10 @@ class VGG11(nn.Module):
             nn.Linear(in_features=512, out_features=4096),
             nn.Dropout(dropout_p),
             nn.ReLU(),
-            nn.Linear(in_features=4096, out_features=1000),
+            nn.Linear(in_features=4096, out_features=4096),
             nn.Dropout(dropout_p),
             nn.ReLU(),
-            nn.Linear(in_features=1000, out_features=10)          
+            nn.Linear(in_features=4096, out_features=10)          
         ]
         return nn.ModuleList(layers)
 
