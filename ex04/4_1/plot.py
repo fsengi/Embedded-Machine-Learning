@@ -198,10 +198,10 @@ def plotaugmenttime(data:dict, ) -> None:
     firstaugment_label = 'randomcrop'
     secondaugment_label = 'normalize'
     thirdaugment_label = 'randomhorizontalflip'
-    baseline_value = data['time'][-1]
-    firstaugment_value = data['time'][-1]
-    secondaugment_value = data['time'][-1]
-    thirdaugment_value = data['time'][-1]
+    baseline_value = data["augment_0"]['time'][-1]
+    firstaugment_value = data["augment_1"]['time'][-1]
+    secondaugment_value = data["augment_2"]['time'][-1]
+    thirdaugment_value = data["augment_3"]['time'][-1]
 
     # Position of the bars on the x-axis
     x_positions = [0, 1, 2, 3]  # Two positions: 0 for the left bar and 1 for the right bar
