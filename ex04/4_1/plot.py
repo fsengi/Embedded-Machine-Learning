@@ -143,7 +143,7 @@ def plotdropout(data:dict) -> None:
     fig, ax1 = plt.subplots()
 
     # Plot the first set of data
-    ax1.plot(data["dropout_dropout_0.0"]['accTest'], 'bo-', label='accuracy dropout 0.0')
+    ax1.plot(data["augment_0"]['accTest'], 'bo-', label='accuracy without augmentation')
     # ax1.plot(data["dropout_0.1"]['accTest'], 'bo-', label='accuracy dropout 0.1')
     # ax1.plot(data["dropout_0.3"]['accTest'], 'bo-', label='accuracy dropout 0.3')
     # ax1.plot(data["dropout_0.5"]['accTest'], 'bo-', label='accuracy dropout 0.5')
@@ -173,6 +173,61 @@ def plotdropout(data:dict) -> None:
     plt.legend()
     plt.savefig("4_1_diff_dropout.png")
 
+def plotaugment(data:dict) -> None:
+    # Create the main plot
+    fig, ax1 = plt.subplots()
+
+    # Plot the first set of data
+    ax1.plot(data["augment_0"]['accTrain'], 'b--', label='training accuracy without augmentation')
+    ax1.plot(data["augment_1"]['accTrain'], 'mo-', label='training accuracy with randomcrop')
+    ax1.plot(data["augment_2"]['accTrain'], 'go-', label='training accuracy with normalize')
+    ax1.plot(data["augment_3"]['accTrain'], 'ro-', label='training accuracy with randomhorizontalflip')
+
+    ax1.set_xlabel("epochs")
+    ax1.set_ylabel("accuracy in %", color='b')
+    ax1.tick_params('y', colors='b')
+
+    # Show the plot
+    plt.title("VGG11 accuracy with different data augmentations")
+    plt.legend()
+    plt.savefig("4_3_augmentation.png")
+
+def plotaugmenttime(data:dict, ) -> None:
+    # Example data
+    baseline_label = 'baseline'
+    firstaugment_label = 'randomcrop'
+    secondaugment_label = 'normalize'
+    thirdaugment_label = 'randomhorizontalflip'
+    baseline_value = data['time'][-1]
+    firstaugment_value = data['time'][-1]
+    secondaugment_value = data['time'][-1]
+    thirdaugment_value = data['time'][-1]
+
+    # Position of the bars on the x-axis
+    x_positions = [0, 1, 2, 3]  # Two positions: 0 for the left bar and 1 for the right bar
+
+    # Create the plot
+    fig, ax = plt.subplots()
+
+    # Plot the left side bar
+    ax.bar(x_positions[0], baseline_value, width=0.4, label=f'{baseline_label} {round(baseline_value,2)}s')
+
+    ax.bar(x_positions[1], firstaugment_value, width=0.4, label=f'{firstaugment_label} {round(firstaugment_value,2)}s')
+
+    ax.bar(x_positions[2], secondaugment_value, width=0.4, label=f'{secondaugment_label} {round(secondaugment_value,2)}s')
+
+    ax.bar(x_positions[3], thirdaugment_value, width=0.4, label=f'{thirdaugment_label} {round(thirdaugment_value,2)}s')
+
+    # Customize the plot
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels([baseline_label, firstaugment_label, secondaugment_label, thirdaugment_label])
+    ax.set_ylabel('time in s')
+    ax.set_title('time comparison baseline vs different dataset augmentation')
+    ax.legend()
+
+    # Show the plot
+    plt.show()
+    plt.savefig("4_3_augmentation_time_comp.png")
 
 def plotWeightDecayAcc(data:dict) -> None:
     # Plot the first set of data
@@ -229,7 +284,9 @@ if __name__ == "__main__":
                         help='plot loss with dropout')
     parser.add_argument('--plot-weight-decay', action='store_true', default=False,
                         help='plot hist for weight decay')        
-  
+    parser.add_argument('--plot-augment', action='store_true', default=False,
+                        help='plot accuracy and time for augmented dataset')   
+
     args = parser.parse_args()
     use_cuda = not args.plot_bar
 
@@ -251,8 +308,12 @@ if __name__ == "__main__":
         plotdata(data=dataGPU)
     elif args.plot_dropout:
         plotdropout(data=dataGPU)
+    elif args.plot_augment:
+        plotaugment(data=dataGPU)
+        plotaugmenttime(data=dataGPU)
     elif args.plot_weight_decay:
         plotWeightDecayAcc(data=dataGPU)
+
         # plotWeightDecayHist(data=dataGPU)
 
         # File paths to your .pt files

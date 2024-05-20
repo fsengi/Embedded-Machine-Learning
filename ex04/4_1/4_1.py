@@ -62,6 +62,8 @@ class VGG11(nn.Module):
 
 def train(args, model, device, train_loader, optimizer, epoch):
     model.train()
+    correct = 0
+    total = 0
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -69,13 +71,19 @@ def train(args, model, device, train_loader, optimizer, epoch):
         loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
+
+        # Calculate training accuracy
+        pred = output.argmax(dim=1, keepdim=True)
+        correct += pred.eq(target.view_as(pred)).sum().item()
+        total += target.size(0)
+
         if batch_idx % args.log_interval == 0:
             trainloss = 100. * batch_idx / len(train_loader)
             print('Current time: {:.4f}; Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 time.time(),
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 trainloss,  loss.item()))
-    return loss.item()
+    return loss.item(), 100. * correct / total
 
 def test(model, device, test_loader, epoch):
     model.eval()
@@ -116,6 +124,8 @@ def main():
                         help='random seed (default: 1)')
     parser.add_argument('--log-interval', type=int, default=200, metavar='N',
                         help='how many batches to wait before logging training status')
+    parser.add_argument('--augment', type=int,  default=0, metavar='A',
+                        help='use augmentation on test set (possible options =>1-3)')
     args = parser.parse_args()
     use_cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -135,14 +145,45 @@ def main():
         with open("GPUdata.json", 'r') as json_file:
             data = json.load(json_file)
 
-    train_transforms = [transforms.ToTensor()]
-    train_transforms = transforms.Compose(train_transforms)
+    train_transform1 = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        #transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        #transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    train_transform2 = transforms.Compose([
+        #transforms.RandomCrop(32, padding=4),
+        #transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+    train_transform3 = transforms.Compose([
+        #transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        #transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
+
 
     transform=transforms.Compose([
         transforms.ToTensor()
         ])
     
-    cifar10_dataset_train = datasets.CIFAR10('../../data', train=True, download=True, transform=transform)
+    if (args.augment == 0):
+        cifar10_dataset_train = datasets.CIFAR10('../../data', train=True, download=True, transform=transform)
+    elif (args.augment == 1):
+        cifar10_dataset_train = datasets.CIFAR10('../../data', train=True, download=True, transform=train_transform1)
+    elif (args.augment == 2):
+        cifar10_dataset_train = datasets.CIFAR10('../../data', train=True, download=True, transform=train_transform2)
+    elif (args.augment == 3):
+        cifar10_dataset_train = datasets.CIFAR10('../../data', train=True, download=True, transform=train_transform3)
+    else:
+        cifar10_dataset_train = datasets.CIFAR10('../../data', train=True, download=True, transform=transform)
+
+    
     cifar10_dataset_test = datasets.CIFAR10('../../data', train=False, transform=transform)
 
     train_loader = torch.utils.data.DataLoader(cifar10_dataset_train,**train_kwargs)
@@ -161,14 +202,17 @@ def main():
     trainLoss = []
     testLoss = []
     accTest = []
+    accTrain = []
 
     start = time.time()
     for epoch in range(1, args.epochs + 1):
-        trainLoss.append(train(args, model, device, train_loader, optimizer, epoch))
-        testloss, acc = test(model, device, test_loader, epoch)
+        trainloss, trainacc = train(args, model, device, train_loader, optimizer, epoch)
+        testloss, testacc = test(model, device, test_loader, epoch)
         timeDevice.append(time.time() - start)
-        accTest.append(acc)
+        accTest.append(testacc)
+        accTrain.append(trainacc)
         testLoss.append(testloss)
+        trainLoss.append(trainloss)
 
     if (args.L2_reg is not None):
         f_name = f'trained_VGG11_L2-{args.L2_reg}.pt'
@@ -179,12 +223,14 @@ def main():
         'time': timeDevice,
         'trainLoss': trainLoss,
         'testLoss': testLoss,
-        'accTest': accTest
+        'accTest': accTest,
+        'accTrain': accTrain
     }
 
     if (args.L2_reg is not None):
-    
         data[f'wdecay_{args.L2_reg}'] = dataDict
+    elif (args.augment is not None):
+        data[f'augment_{args.augment}'] = dataDict
     else:
         data[f'dropout_{args.dropout_p}'] = dataDict
 
