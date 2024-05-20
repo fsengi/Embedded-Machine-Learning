@@ -229,6 +229,27 @@ def plotaugmenttime(data:dict, ) -> None:
     plt.show()
     plt.savefig("4_3_augmentation_time_comp.png")
 
+def plotaugmenttest(data:dict) -> None:
+    # Create the main plot
+    fig, ax1 = plt.subplots()
+
+    # Plot the first set of data
+    ax1.plot(data["augment_0"]['accTest'], 'b--', label='accuracy without augmentation')
+    ax1.plot(data["augment_1"]['accTest'], 'mo-', label='accuracy with randomcrop')
+    ax1.plot(data["augment_2"]['accTest'], 'go-', label='accuracy with normalize')
+    ax1.plot(data["augment_3"]['accTest'], 'ro-', label='accuracy with randomhorizontalflip')
+    ax1.set_xlabel("time in s")
+    ax1.set_ylabel("accuracy in %", color='b')
+    ax1.tick_params('y', colors='b')
+
+    # Add legends
+    ax1.legend(loc='upper left')
+
+    # Show the plot
+    plt.title("VGG11 test accuracy over 30 epochs with augmentation")
+    plt.legend()
+    plt.savefig("4_3_test_accuracy_loss.png")
+
 def plotWeightDecayAcc(data:dict) -> None:
     # Plot the first set of data
     plt.plot(data["wdecay_0.0"]['accTest'], 'x-', label='L2 reg 0.0')
@@ -310,6 +331,7 @@ if __name__ == "__main__":
         plotdropout(data=dataGPU)
     elif args.plot_augment:
         plotaugment(data=dataGPU)
+        plotaugmenttest(data=dataGPU)
         plotaugmenttime(data=dataGPU)
     elif args.plot_weight_decay:
         plotWeightDecayAcc(data=dataGPU)
