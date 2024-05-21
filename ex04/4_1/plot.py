@@ -43,10 +43,10 @@ class VGG11(nn.Module):
             nn.Linear(in_features=512, out_features=4096),
             nn.Dropout(dropout_p),
             nn.ReLU(),
-            nn.Linear(in_features=4096, out_features=1000),
+            nn.Linear(in_features=4096, out_features=4096),
             nn.Dropout(dropout_p),
             nn.ReLU(),
-            nn.Linear(in_features=1000, out_features=10)          
+            nn.Linear(in_features=4096, out_features=10)          
         ]
         return nn.ModuleList(layers)
 
@@ -61,15 +61,15 @@ def plotdata(data:dict) -> None:
     fig, ax1 = plt.subplots()
 
     # Plot the first set of data
-    ax1.plot(data['accTest'], 'bo-', label='accuracy')
-    ax1.set_xlabel("time in s")
+    ax1.plot(data['baseline']['accTest'], 'bo-', label='accuracy')
+    ax1.set_xlabel("epochs")
     ax1.set_ylabel("accuracy in %", color='b')
     ax1.tick_params('y', colors='b')
 
     # Create a secondary y-axis sharing the same x-axis
     ax2 = ax1.twinx()
-    ax2.plot(data['trainLoss'], 'x-', label='trainLoss')
-    ax2.plot(data['testLoss'], 'x-', label='testLoss')
+    ax2.plot(data['baseline']['trainLoss'], 'x-', label='trainLoss')
+    ax2.plot(data['baseline']['testLoss'], 'x-', label='testLoss')
     ax2.set_ylabel('Loss')
     ax2.tick_params('y')
 
@@ -80,7 +80,7 @@ def plotdata(data:dict) -> None:
     # Show the plot
     plt.title("VGG11 accuracy, test loss and train loss over 30 epochs")
     plt.legend()
-    plt.savefig("4_1_loss_ocer_time.png")
+    plt.savefig("4_1_baseline_over_epochs.png")
 
 def plotOverTime(data:dict) -> None:
     # Create the main plot
@@ -112,8 +112,8 @@ def plotbar(dataCPU:dict, dataGPU:dict, ) -> None:
     # Example data
     left_label = 'CPU'
     right_label = 'GPU'
-    left_value = dataCPU['time'][-1]
-    right_value = dataGPU['time'][-1]
+    left_value = dataCPU['baseline']['time'][0]
+    right_value = dataGPU['baseline']['time'][0]
 
     # Position of the bars on the x-axis
     x_positions = [0, 1]  # Two positions: 0 for the left bar and 1 for the right bar
@@ -271,19 +271,19 @@ def plotWeightDecayAcc(data:dict) -> None:
 def plotWeightDecayHist(weight_list:list, titels:list) -> None:
     fig, axs = plt.subplots(1, 5, figsize=(25, 5))
     for i, (weights, title) in enumerate(zip(weight_list, titels)):
-        axs[i].hist(weights, bins=100, alpha=0.7)
+        axs[i].hist(weights, bins=30, alpha=0.7)
         axs[i].set_title(title)
         axs[i].set_xlabel('epochs')
         axs[i].set_ylabel('count weight value')
     plt.tight_layout()
     # Show the plot
-    plt.title("VGG11 last layer histograms for different L2 regularization rates over epochs")
+    # plt.title("VGG11 last layer histograms for different L2 regularization rates over epochs")
     plt.legend()
     plt.savefig("4_2_L2_reg_hist.png")
 
 def plotSingleWeightDecayHist(weight_list:list, titel:str) -> None:
     plt.clf()
-    plt.hist(weight_list, bins=100, alpha=0.7)
+    plt.hist(weight_list[-1], bins=30, alpha=0.7)
     plt.title(titel)
     plt.xlabel('epochs')
     plt.ylabel('count weight value')
@@ -299,8 +299,8 @@ if __name__ == "__main__":
     
     parser.add_argument('--plot-bar', action='store_true', default=False,
                         help='plot time diff cpu gpu')
-    parser.add_argument('--plot-loss', action='store_true', default=False,
-                        help='plot loss no dropout')
+    parser.add_argument('--plot-baseline', action='store_true', default=False,
+                        help='plot baseline data no regularization no transform')
     parser.add_argument('--plot-dropout', action='store_true', default=False,
                         help='plot loss with dropout')
     parser.add_argument('--plot-weight-decay', action='store_true', default=False,
@@ -325,7 +325,7 @@ if __name__ == "__main__":
     
     if args.plot_bar:
         plotbar(dataGPU=dataGPU, dataCPU=dataCPU)
-    elif args.plot_loss:
+    elif args.plot_baseline:
         plotdata(data=dataGPU)
     elif args.plot_dropout:
         plotdropout(data=dataGPU)
@@ -335,8 +335,6 @@ if __name__ == "__main__":
         plotaugmenttime(data=dataGPU)
     elif args.plot_weight_decay:
         plotWeightDecayAcc(data=dataGPU)
-
-        # plotWeightDecayHist(data=dataGPU)
 
         # File paths to your .pt files
         model_files = [
@@ -351,16 +349,19 @@ if __name__ == "__main__":
         titles = ['L2 reg 0.0', 'L2 reg 0.001', 'L2 reg 1e-04', 'L2 reg 1e-05', 'L2 reg 1e-06']
 
         # Load models and extract last layer weights
-    
         model = VGG11()
 
+        weight_list = []
+
         for filepath, title in zip(model_files, titles):
+            model = VGG11()
             model.state_dict(torch.load(filepath))
-            weight_list = []
+            
             for name, param in model.named_parameters():
-                print(name)
                 if 'layers.18.weight' in name:
-                    weight_list = param.detach().view(-1).numpy()  
-                    # plotSingleWeightDecayHist(weight_list=weight_list, titel=title)
+                    weight_list.append([param.detach().view(-1).numpy()])
+                    print(f'{weight_list[-1]} min{np.amin(weight_list[-1])} max{np.amax(weight_list[-1])}')
+                    plotSingleWeightDecayHist(weight_list=weight_list, titel=title)
         plotWeightDecayHist(weight_list=weight_list, titels=titles)
+    
 

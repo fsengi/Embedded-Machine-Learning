@@ -144,6 +144,9 @@ def main():
 
         with open("GPUdata.json", 'r') as json_file:
             data = json.load(json_file)
+    else:
+        with open("CPUdata.json", 'r') as json_file:
+            data = json.load(json_file)
 
     train_transform1 = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
@@ -227,19 +230,25 @@ def main():
         'accTrain': accTrain
     }
 
-    if (args.L2_reg is not None):
+    if (args.L2_reg != None):
+        print('wdecay_')
         data[f'wdecay_{args.L2_reg}'] = dataDict
-    elif (args.augment is not None):
+    elif (args.augment != 0.0):
+        print('augment_')
         data[f'augment_{args.augment}'] = dataDict
-    else:
+    elif (args.dropout_p != 0.0):
+        print('dropout_')
         data[f'dropout_{args.dropout_p}'] = dataDict
+    else:
+        print('baseline')
+        data[f'baseline'] = dataDict
 
     if use_cuda:
         with open("GPUdata.json", 'w') as json_file:
-            json.dump(data, json_file)
+            json.dump(data, json_file, indent=4)
     else:
         with open("CPUdata.json", 'w') as json_file:
-            json.dump(data, json_file)
+            json.dump(data, json_file, indent=4)
 
 
 if __name__ == '__main__':

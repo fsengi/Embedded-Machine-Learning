@@ -12,16 +12,16 @@ conda activate eml
 
 
 ################ create bar plot 4.2 ################### 
-# echo "run 4_2 exercise accuracy"
-# python 4_1.py --epochs 30 --L2_reg 0.0
-# echo "run 4_2 exercise accuracy"
-# python 4_1.py --epochs 30 --L2_reg 0.001
-# echo "run 4_2 exercise accuracy"
-# python 4_1.py --epochs 30 --L2_reg 0.0001
-# echo "run 4_2 exercise accuracy"
-# python 4_1.py --epochs 30 --L2_reg 0.00001
-# echo "run 4_2 exercise accuracy"
-# python 4_1.py --epochs 30 --L2_reg 0.000001
+echo "run 4_2 exercise accuracy"
+python 4_1.py --epochs 30 --L2_reg 0.0
+echo "run 4_2 exercise accuracy"
+python 4_1.py --epochs 30 --L2_reg 0.001
+echo "run 4_2 exercise accuracy"
+python 4_1.py --epochs 30 --L2_reg 0.0001
+echo "run 4_2 exercise accuracy"
+python 4_1.py --epochs 30 --L2_reg 0.00001
+echo "run 4_2 exercise accuracy"
+python 4_1.py --epochs 30 --L2_reg 0.000001
 
 # echo "plot"
 python plot.py --plot-weight-decay
