@@ -23,8 +23,8 @@ class BasicBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = norm_layer(planes)
-
-        self.shortcut = nn.Identity()
+        
+        self.shortcut = nn.Sequential()
         if stride != 1 or inplanes != planes:
             self.shortcut = nn.Sequential(
                 nn.Conv2d(inplanes, planes, kernel_size=1, stride=stride, bias=False),
@@ -34,21 +34,22 @@ class BasicBlock(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         identity = self.shortcut(x)
 
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
 
-        x = self.conv2(x)
-        x = self.bn2(x)
+        out = self.conv2(out)
+        out = self.bn2(out)
 
-        x += identity
-        x = self.relu(x)
-        return x
+        out += identity
+        out = self.relu(out)
+
+        return out
 
 class ResNet(nn.Module):
     def __init__(self, norm_layer: Optional[Callable[..., nn.Module]] = nn.Identity):
         super().__init__()
-        self._norm_layer = norm_layer
+        self._norm_layer = norm_layer  # Initialize _norm_layer here
         self.conv1 = nn.Conv2d(3, 32, 3, 1, padding=1)
         self.block1_1 = BasicBlock(32, 32, 1, self._norm_layer)
         self.block1_2 = BasicBlock(32, 32, 1, self._norm_layer)
@@ -169,11 +170,13 @@ def main():
     print(f'Curr trafos: ', transform)
 
 
-    dataset_train = datasets.CIFAR10(root='./data', train=True, download=True,
+    cifar10_dataset_train = datasets.CIFAR10(root='./data', train=True, download=True,
                     transform=transform)
-    dataset_test = datasets.CIFAR10(root='./data', train=False, download=True,
+    cifar10_dataset_test = datasets.CIFAR10(root='./data', train=False, download=True,
                     transform=transform)
 
+    dataset_train = torch.utils.data.DataLoader(cifar10_dataset_train,**train_kwargs)
+    dataset_test = torch.utils.data.DataLoader(cifar10_dataset_test, **test_kwargs)
 
     norm_layer = nn.Identity
     model = ResNet(norm_layer=norm_layer)

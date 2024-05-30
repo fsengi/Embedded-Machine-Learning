@@ -12,3 +12,5 @@ conda activate eml
 
 echo "Running exercise05_template.py"
 python exercise05_ResNet_template.py
+echo "Plotting..."
+python plot.py
