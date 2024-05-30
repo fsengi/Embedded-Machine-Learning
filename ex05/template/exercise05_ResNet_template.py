@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
-import time
+import time, json
 import torchvision.ops as tv_nn
 from typing import Any, Callable, List, Optional, Type, Union
 
@@ -18,15 +18,37 @@ class BasicBlock(nn.Module):
         norm_layer: Optional[Callable[..., nn.Module]] = nn.Identity,
     ) -> None:
         super().__init__()
-        # TODO: Implement the basic residual block!
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = norm_layer(planes)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = norm_layer(planes)
+
+        self.shortcut = nn.Identity()
+        if stride != 1 or inplanes != planes:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(inplanes, planes, kernel_size=1, stride=stride, bias=False),
+                norm_layer(planes)
+            )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # TODO: Implement the basic residual block!
+        identity = self.shortcut(x)
+
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+
+        x = self.conv2(x)
+        x = self.bn2(x)
+
+        x += identity
+        x = self.relu(x)
         return x
 
 class ResNet(nn.Module):
     def __init__(self, norm_layer: Optional[Callable[..., nn.Module]] = nn.Identity):
         super().__init__()
+        self._norm_layer = norm_layer
         self.conv1 = nn.Conv2d(3, 32, 3, 1, padding=1)
         self.block1_1 = BasicBlock(32, 32, 1, self._norm_layer)
         self.block1_2 = BasicBlock(32, 32, 1, self._norm_layer)
@@ -59,6 +81,8 @@ class ResNet(nn.Module):
 
 
 def train(args, model, device, train_loader, optimizer, epoch):
+    correct = 0
+    total = 0
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -67,11 +91,18 @@ def train(args, model, device, train_loader, optimizer, epoch):
         loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
+
+        # Calculate training accuracy
+        pred = output.argmax(dim=1, keepdim=True)
+        correct += pred.eq(target.view_as(pred)).sum().item()
+        total += target.size(0)
+
         if batch_idx % args.log_interval == 0:
             print('Current time: {:.4f}; Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 time.time(),
                 epoch, batch_idx * len(data), len(train_loader.dataset),
                 100. * batch_idx / len(train_loader), loss.item()/data.shape[0] ))
+    return loss.item(), 100. * correct / total
 
 def test(model, device, test_loader, epoch):
     model.eval()
@@ -86,12 +117,15 @@ def test(model, device, test_loader, epoch):
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     test_loss /= len(test_loader.dataset)
+    acc = 100. * correct / len(test_loader.dataset)
 
     print('Current time: {:.4f}; Test Epoch: {}, Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.4f}%)\n'.format(
         time.time(),
         epoch,
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
+    return test_loss, acc
+
 
 def main():
     # Training settings
@@ -151,10 +185,35 @@ def main():
         L2_reg = 0.
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=L2_reg)
 
+    timeDevice = []
+    trainLoss = []
+    testLoss = []
+    accTest = []
+    accTrain = []
+
     print(f'Starting training at: {time.time():.4f}')
+    start = time.time()
     for epoch in range(1, args.epochs + 1):
-        train(args, model, device, dataset_train, optimizer, epoch)
-        test(model, device, dataset_test, epoch)
+        trainloss, trainacc = train(args, model, device, dataset_train, optimizer, epoch)
+        testloss, testacc = test(model, device, dataset_test, epoch)
+        timeDevice.append(time.time() - start)
+        accTest.append(testacc)
+        accTrain.append(trainacc)
+        testLoss.append(testloss)
+        trainLoss.append(trainloss)
+
+    dataDict = {
+        'time': timeDevice,
+        'trainLoss': trainLoss,
+        'testLoss': testLoss,
+        'accTest': accTest,
+        'accTrain': accTrain
+    }
+
+
+    with open("trainingdata.json", 'w') as json_file:
+        json.dump(dataDict, json_file, indent=4)
+
 
 if __name__ == '__main__':
     main()
