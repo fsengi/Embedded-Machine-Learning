@@ -11,5 +11,5 @@ eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
 conda activate eml
 
 echo "Running 3_3.py"
-# python 3_3.py
+python 3_3.py
 python plot.py

@@ -9,6 +9,7 @@ from torch.optim.lr_scheduler import StepLR
 import matplotlib.pyplot as plt
 import time
 import json
+#from torchinfo import summary  # Import torchinfo for model summary
 
 
 class MLP(nn.Module):
@@ -153,6 +154,13 @@ def main():
         for lr in lrList:
             print(f'optimizerStr {optimizerStr} lr {lr}')
             model = CNN().to(device)
+
+            # Calculate MACs using torchinfo
+            #input_size = (1, 3, 32, 32)  # SVHN input size
+            #model_summary = summary(model, input_size=input_size, col_names=["input_size", "output_size", "num_params", "mult_adds"])
+            #total_macs = model_summary.total_mult_adds
+            #print(f"Total MACs: {total_macs}")
+
             accList = []
             if optimizerStr == 'SGD':
                 optimizer = optim.SGD(model.parameters(), lr=lr)
