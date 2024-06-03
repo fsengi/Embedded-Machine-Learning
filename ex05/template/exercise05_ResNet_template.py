@@ -8,6 +8,7 @@ from torchvision import datasets, transforms
 import time, json
 import torchvision.ops as tv_nn
 from typing import Any, Callable, List, Optional, Type, Union
+#from torchinfo import summary  # Import torchinfo for model summary
 
 class BasicBlock(nn.Module):
     def __init__(
@@ -181,6 +182,12 @@ def main():
     norm_layer = nn.Identity
     model = ResNet(norm_layer=norm_layer)
     model = model.to(device)
+
+    # Calculate MACs using torchinfo
+    #input_size = (1, 3, 32, 32)  # CIFAR-10 input size
+    #model_summary = summary(model, input_size=input_size, col_names=["input_size", "output_size", "num_params", "mult_adds"])
+    #total_macs = model_summary.total_mult_adds
+    #print(f"Total MACs: {total_macs}")
 
     if args.L2_reg is not None:
         L2_reg = args.L2_reg
