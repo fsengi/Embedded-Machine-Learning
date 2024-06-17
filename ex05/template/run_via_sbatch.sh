@@ -11,6 +11,6 @@ eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
 conda activate eml
 
 echo "Running exercise05_template.py"
-python exercise05_ResNet_template.py --epochs 50
+#python exercise05_ResNet_template.py --epochs 50
 echo "Plotting..."
 python plot.py

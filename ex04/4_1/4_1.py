@@ -7,7 +7,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 import time, json
 import torchvision.ops as tv_nn
-#from torchinfo import summary  # Import torchinfo for model summary
+from torchinfo import summary  # Import torchinfo for model summary
 
 
 class VGG11(nn.Module):
@@ -196,10 +196,10 @@ def main():
     model = VGG11(dropout_p=args.dropout_p).to(device)
 
     # Calculate MACs using torchinfo
-    #input_size = (1, 3, 32, 32)  # SVHN input size
-    #model_summary = summary(model, input_size=input_size, col_names=["input_size", "output_size", "num_params", "mult_adds"])
-    #total_macs = model_summary.total_mult_adds
-    #print(f"Total MACs: {total_macs}")
+    input_size = (1, 3, 32, 32)  # SVHN input size
+    model_summary = summary(model, input_size=input_size, col_names=["input_size", "output_size", "num_params", "mult_adds"])
+    total_macs = model_summary.total_mult_adds
+    print(f"Total MACs: {total_macs}")
 
     if args.L2_reg is None:
         weight_decay = 0.0

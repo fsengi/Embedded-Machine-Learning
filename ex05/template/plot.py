@@ -10,16 +10,16 @@ def plotdata(data:dict) -> None:
     fig, ax1 = plt.subplots()
 
     # Plot the first set of data
-    ax1.plot(data['accTest'], 'bo-', label='test accuracy')
-    ax1.plot(data['accTrain'], 'go-', label='training accuracy')
-    ax1.set_xlabel("epochs")
+    ax1.plot(data["time"], data['accTest'], 'bo-', label='test accuracy')
+    ax1.plot(data["time"], data['accTrain'], 'go-', label='training accuracy')
+    ax1.set_xlabel("time in s")
     ax1.set_ylabel("accuracy in %", color='b')
     ax1.tick_params('y', colors='b')
 
     # Create a secondary y-axis sharing the same x-axis
     ax2 = ax1.twinx()
-    ax2.plot(data['trainLoss'], 'x-', label='trainLoss')
-    ax2.plot(data['testLoss'], 'x-', label='testLoss')
+    ax2.plot(data["time"], data['trainLoss'], 'x-', label='trainLoss')
+    ax2.plot(data["time"], data['testLoss'], 'x-', label='testLoss')
     ax2.set_ylabel('Loss')
     ax2.tick_params('y')
 
@@ -28,9 +28,9 @@ def plotdata(data:dict) -> None:
     ax2.legend(loc='lower right')
 
     # Show the plot
-    plt.title("ResNet accuracy, test loss and train loss over 30 epochs")
+    plt.title("ResNet accuracy, test loss and train loss over time")
     plt.legend()
-    plt.savefig("5_2_resnet_over_epochs.png")
+    plt.savefig("5_2_resnet_over_time.png")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch SVHN Example')
