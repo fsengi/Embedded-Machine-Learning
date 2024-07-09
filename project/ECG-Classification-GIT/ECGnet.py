@@ -327,8 +327,8 @@ if __name__ == "__main__":
         best_acc = val_accuracy[0]
         test(net, test_loader, loss_func)
         save_model(args.model, net, optimizer_w, optimizer_b, parameters_w_bin)
-        # print(parameters_w)
-        # save_model_simple('./ALQ_in.pt',net)
+        #print(parameters_w)
+        #save_model_simple('./ALQ_in.pt',net)
         num_training_sample = len(train_dataset)
         M_p = (args.pr/args.top_k)/(args.epoch_prune *
                                     math.ceil(num_training_sample/args.batch_size))
