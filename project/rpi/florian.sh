@@ -10,6 +10,6 @@
 eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
 conda activate eml
 
-python florian_network.py --epochs 400 >> log.txt
+python florian_network.py --epochs 300 >> tests1507.txt
 
 #python mary_try_stuff_with_brevitas.py
